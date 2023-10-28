@@ -1,7 +1,9 @@
 #include <DHT.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
 
+char jsonOutput[2100];
 
 //=========================================== D H T =============================================
 #define DHTPIN 26  //Pino one está o DHT22
@@ -42,19 +44,35 @@ void configWIFI() {
   }
   
 }
+
 void postHTTP() {
    if(WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
+    
+    http.begin("https://api-hortas-service.onrender.com/api-hortas/createLeitura");
+    http.addHeader("Content-Type", "application/json");
 
-    http.begin("https://jsonplaceholder.typicode.com/posts/1");
+    DynamicJsonDocument doc(1024);
 
-    int statusCode = http.GET();
+    doc["temperaturaSolo"] = 0;
+    doc["temperaturaAmbiente"] = 0;
+    doc["umidadeAtmosfera"]   = 0;
+    doc["umidadeSolo"] = 0;
+    doc["phSolo"] = "0";
+    doc["condutividadeEletricaSolo"] = 0;
+    doc["luminosidade"] = 0;
+
+    serializeJson(doc, jsonOutput);
+
+    int statusCode = http.POST(jsonOutput);
 
     if (statusCode > 0) {
       Serial.print("HTTP status code: ");
-      Serial.println(http.GET());
+      Serial.println(statusCode);
+
+      String response = http.getString();
       Serial.print("HTTP response: ");
-      Serial.println(http.getString());
+      Serial.println(response);
     } else {
       Serial.println("HTTP ERRo: ");
       Serial.println(http.GET());
@@ -62,7 +80,6 @@ void postHTTP() {
     }
 
     http.end();
-    delay(2000);
   }
 }
 
@@ -80,5 +97,6 @@ void loop() {
   
   dhtsensor();
   //postHTTP();
+  delay(10000);
 
 }
