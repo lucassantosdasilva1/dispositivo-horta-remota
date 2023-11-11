@@ -2,9 +2,45 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 
 char jsonOutput[2100];
+//=========================================== U M I D A D E  DO  S O L O =============================================
+#define sensorUmidadeSolo 36
+#define pinSensorD 8
 
+float Umidade;
+float PorcentagemUmidade;
+
+float loopUmidadeSolo() {
+  Umidade = analogRead(sensorUmidadeSolo);
+  PorcentagemUmidade = map(Umidade, 1660, 4095, 100, 0);
+  Serial.print("Umidade do solo:");
+  Serial.print(PorcentagemUmidade);
+  Serial.println("%");
+  Serial.print("amperagem recebida:");
+  Serial.println(Umidade);
+
+  return PorcentagemUmidade;
+}
+//=========================================== T E M P E R A T U R A  DO  S O L O =============================================
+#define ONE_WIRE_BUS 25
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+void setupTempSolo() {
+  sensors.begin();
+}
+float loopTempSolo() {
+  sensors.requestTemperatures();
+  float tempC = sensors.getTempCByIndex(0);
+  Serial.print("Temperatura do solo: ");
+  Serial.println(tempC);
+
+  return tempC;
+}
 //=========================================== D H T =============================================
 #define DHTPIN 26  //Pino one está o DHT22
 
@@ -13,26 +49,28 @@ DHT dht(26, DHT11); //Objeto que faz a leitura da temperatura e umidade
 float temperature = 0;
 float humidity = 0;
 
-void configDHT() {
+void setupDHT() {
   dht.begin();
 }
-void dhtsensor() {
+float loopDHT() {
   temperature = dht.readTemperature();
   humidity = dht.readHumidity();
+  Serial.println("----------------------------");
 
-  Serial.print("temperature: ");
+  Serial.print("Temperatura do ar: ");
   Serial.print(temperature);
   Serial.println(" C");
-  Serial.print("Umidade: ");
-  Serial.println(humidity);
-  Serial.println(" %");
+  Serial.print("Umidade do ar: ");
+  Serial.print(humidity);
+  Serial.println("%");
   
   Serial.println("----------------------------");
+
+  return temperature, humidity;
 }
-//=========================================== U M I D A D E  DO  S O L O =============================================
-//=========================================== T E M P E R A T U RA  DO  S O L O =============================================
+
 //=========================================== W I F I =============================================
-void configWIFI() {
+void setupWIFI() {
   // Inicializa a conexão com a rede Wi-Fi
   WiFi.begin("Lorena", "L12345678");
 
@@ -45,6 +83,7 @@ void configWIFI() {
   
 }
 
+//=========================================== H T T P =============================================
 void postHTTP() {
    if(WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
@@ -85,8 +124,9 @@ void postHTTP() {
 
 void setup() {
   delay(100);
-  configWIFI();
-  configDHT();
+  setupWIFI();
+  setupDHT();
+  setupTempSolo();
   delay(2000);
 
   
@@ -95,7 +135,10 @@ void setup() {
 
 void loop() {
   
-  dhtsensor();
+  loopDHT();
+  loopTempSolo();
+  loopUmidadeSolo();
+  Serial.println("----------------------------");
   //postHTTP();
   delay(10000);
 
