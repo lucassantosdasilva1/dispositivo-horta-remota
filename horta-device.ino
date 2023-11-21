@@ -88,6 +88,8 @@ void statusDHT() {
 }
 
 //=========================================== W I F I =============================================
+const char* SSID = "Lorena";
+const char* PASSWD = "L12345678";
 void setupWIFI() {
   // Inicializa a conexão com a rede Wi-Fi
   WiFi.begin("Lorena", "L12345678");
@@ -98,28 +100,37 @@ void setupWIFI() {
     delay(1000);
     Serial.println("Conectando ao WiFi...");
   }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Wifi Conectado!");
+  }
   
 }
 
 //=========================================== H T T P =============================================
+const char* URL = "http://192.168.1.41:3333/api-hortas/createLeitura";
+// const char* URL = "https://api-hortas-service.onrender.com/api-hortas/createLeitura";
+
 void postHTTP() {
    if(WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     
-    http.begin("https://api-hortas-service.onrender.com/api-hortas/createLeitura");
+    http.begin(URL);
     http.addHeader("Content-Type", "application/json");
 
     DynamicJsonDocument doc(1024);
 
-    doc["temperaturaSolo"] = 0;
-    doc["temperaturaAmbiente"] = 0;
-    doc["umidadeAtmosfera"]   = 0;
-    doc["umidadeSolo"] = 0;
+    doc["temperaturaSolo"] = temperaturaSolo;
+    doc["temperaturaAmbiente"] = temperaturaAr;
+    doc["umidadeAtmosfera"]   = umidadeAr;
+    doc["umidadeSolo"] = PorcentagemUmidade;
     doc["phSolo"] = "0";
     doc["condutividadeEletricaSolo"] = 0;
     doc["luminosidade"] = 0;
 
     serializeJson(doc, jsonOutput);
+
+    Serial.println(jsonOutput);
 
     int statusCode = http.POST(jsonOutput);
 
@@ -223,9 +234,9 @@ void loopMQTT() {
 
 void setup() {
   delay(100);
-  setupWIFI();
   setupDHT();
   setupTempSolo();
+  setupWIFI();
   setupMQTT();
   delay(2000);
 
@@ -243,7 +254,7 @@ void loop() {
   statusUmidadeSolo();
   Serial.println("----------------------------");
   loopMQTT();
-  //postHTTP();
+  postHTTP();
   delay(10000);
 
 }
